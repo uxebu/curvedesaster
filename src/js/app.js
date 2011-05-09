@@ -6,54 +6,41 @@
 		this.ctx = this.canvas.getContext('2d');
 		this.players = {
 			'dude': {
-				x: 23,
-				y: 50,
+				x: 200,
+				y: 200,
 				color: 'rgb(123,240,543)',
-				d: 'l',
+				ix: -1,
+				iy: 0,
+				angle: 0,
 				name: 'Dude'
 			},
 			'fritz': {
-				x: 55,
-				y: 87,
+				x: 350,
+				y: 350,
 				color: 'rgb(100,200,300)',
-				d: 'r',
+				ix: 1,
+				iy: 0,
+				angle: 0,
 				name: 'Fritz'
 			}
 		};
 		this.keyMap = {
 			65: {
 				id: 'fritz',
-				d: 'l'
-			},
-			87: {
-				id: 'fritz',
-				d: 'u'
+				angle: -4
 			},
 			68: {
 				id: 'fritz',
-				d: 'r'
-			},
-			83: {
-				id: 'fritz',
-				d: 'd'
+				angle: 4
 			},
 			37: {
 				id: 'dude',
-				d: 'l'
-			},
-			38: {
-				id: 'dude',
-				d: 'u'
+				angle: -4
 			},
 			39: {
 				id: 'dude',
-				d: 'r'
-			},
-			40: {
-				id: 'dude',
-				d: 'd'
-			},
-
+				angle: 4
+			}
 		};
 
 		// Config
@@ -63,36 +50,47 @@
 		this.registerKeyEvents();
 
 		// Paint canvas black
-		this.ctx.fillStyle = "rgb(0,0,0)";
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+		this.clear();
 
 		this.init = true;
 	};
 
 	engine.prototype = {
-		collides: function(x, y){
-			var data = this.ctx.getImageData(x, y, 1, 1).data;
-			if (data[0] == 0 && data[1] == 0 && data[2] == 0){
-				return false;
+     	clear: function(){
+			this.ctx.fillStyle = "rgb(0,0,0)";
+			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+     	},
+		collides: function(user){
+			var x = user.x;
+			var y = user.y;
+			
+			var ixy = this.orientate(user, 2);
+			
+			var data = this.ctx.getImageData(ixy[0], ixy[1], 1, 1).data;
+			if (x <= 1 || x >= 499 || y <= 1 || y >= 499 || data[0] != 0 || data[1] != 0 || data[2] != 0){
+				return true;
 			}
-			return true;
+			return false;
 		},
-		dispatch: function(charCode){
+		handleEvent: function(e){
+			e.preventDefault();
+			var charCode = e.keyCode;
 			var user, km;
 			(km = this.keyMap[charCode]) && (user = this.keyMap[charCode].id);
-			user && (this.players[user].d = km.d);
+			if (user) {
+				this.players[user].angle = km.angle - (e.type === 'keyup' ? km.angle : 0);
+			}
 		},
 		drawPlayer: function(user){
 			// Draw
 			this.ctx.fillStyle = user.color;
-			this.ctx.fillRect(user.x, user.y, 1, 1);
+			this.ctx.fillRect(user.x - 1, user.y - 1, 3, 3);
 		},
 		gameOver: function(user){
 			alert(user.name + ': you lost!');
 
 			// Paint canvas black
-			this.ctx.fillStyle = "rgb(0,0,0)";
-			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+			this.clear();
 
 			this.running = false;
 		},
@@ -107,34 +105,42 @@
 			this.initPlayer();
 			this.render();
 		},
-		nextPosition: function(user){
-			switch (user.d){
-				case 'l':
-					user.x--;
-					break;
-				case 'u':
-					user.y--;
-					break;
-				case 'r':
-					user.x++;
-					break;
-				case 'd':
-					user.y++;
-					break;
-			}
+		orientate: function(user, numSteps){
+				var angle = user.angle * (Math.PI / 180);
+				var speed = 1;
+				var ix = user.ix;
+				var iy = user.iy;
+				console.log(angle);
+				while (numSteps--){
+					ix = ix * Math.cos(angle) - iy * Math.sin(angle);
+					iy = ix * Math.sin(angle) + iy * Math.cos(angle);
+				}
+				
+				var x = user.x + speed * ix;
+				var y = user.y + speed * iy;
+				
+				return [x, y, ix, iy];
+		},
+		transform: function(user){
+			var ixy = this.orientate(user, 1);
+			
+			user.x = ixy[0];
+			user.y = ixy[1];
+			user.ix = ixy[2];
+			user.iy = ixy[3];
 		},
 		render: function(){
 			var p;
 			for (var player in this.players){
 				p = this.players[player];
-				this.nextPosition(p);
+				this.transform(p);
 
 				// Collision detection
-				if (this.collides(p.x, p.y)){
+				if (this.collides(p)){
 					this.gameOver(p);
-				}else{
-					this.drawPlayer(p);
 				}
+
+				this.drawPlayer(p);
 			}
 			var that = this;
 			webkitRequestAnimationFrame(function(){
@@ -143,10 +149,8 @@
 		},
 		registerKeyEvents: function(){
 			var that = this;
-			document.body.addEventListener('keydown', function(e){
-				e.preventDefault();
-				that.dispatch(e.keyCode);
-			})
+			document.body.addEventListener('keydown', this);
+			document.body.addEventListener('keyup', this);
 		}
 	};
 }(this);
