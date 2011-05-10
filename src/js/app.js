@@ -90,7 +90,7 @@
 
 			// Checking collision at three spots around the tip of the line:
 			// front, left and right
-			var nxyf = this.getVector(user, angle)
+			var nxyf = this.getVector(user, angle);
 			var nxyr = this.getVector(user, angle + Math.PI/180*90);
 			var nxyl = this.getVector(user, angle + Math.PI/180*-90);
 
@@ -114,6 +114,7 @@
 			var user, km;
 			(km = this.keyMap[charCode]) && (user = this.keyMap[charCode].id);
 			if (user) {
+//				this.players[user].angle = km.angle - (e.type === 'keyup' ? km.angle : 0);
 				this.players[user].angle = km.angle - (e.type === 'touchend' ? km.angle : 0);
 			}
 		},
@@ -123,7 +124,6 @@
 			this.ctx.beginPath();
 			this.ctx.arc(user.x - this.center, user.y - this.center, this.radius, 0, Math.PI*2);
 			this.ctx.fill();
-		//	this.ctx.closePath();
 		},
 		gameOver: function(user){
 			alert(user.name + ': you lost!');
@@ -146,15 +146,14 @@
 		},
 		orientate: function(user, angle){
 				var angle = angle * (Math.PI / 120);
-				var speed = 1.1;
-				var ix = user.ix;
-				var iy = user.iy;
+				var _ix = user.ix;
+				var _iy = user.iy;
 
-				ix = ix * Math.cos(angle) - iy * Math.sin(angle);
-				iy = ix * Math.sin(angle) + iy * Math.cos(angle);
+				ix = _ix * Math.cos(angle) - _iy * Math.sin(angle);
+				iy = _ix * Math.sin(angle) + _iy * Math.cos(angle);
 
-				var x = user.x + speed * ix;
-				var y = user.y + speed * iy;
+				var x = user.x + ix;
+				var y = user.y + iy;
 
 				return [x, y, ix, iy];
 		},
@@ -180,12 +179,11 @@
 				}
 			}
 			var that = this;
-			//webkitRequestAnimationFrame(function(){
+			// Can't use requestAnimationFrame on mobile :(
 			var t = setTimeout(function(){
 				clearTimeout(t);
 				that.running && that.render();
-			}, 1000 / 80);
-			//});
+			}, 1000 / 40);
 		},
 		registerKeyEvents: function(){
 			var that = this;
@@ -193,8 +191,8 @@
 			document.body.addEventListener('touchstart', this);
 			document.body.addEventListener('touchend', this);
 
-			document.body.addEventListener('keydown', this);
-			document.body.addEventListener('keyup', this);
+//			document.body.addEventListener('keydown', this);
+//			document.body.addEventListener('keyup', this);
 		}
 	};
 }(this);
