@@ -45,6 +45,8 @@
 
 		// Config
 		this.framerate = 60;
+		this.radius = 1.5;
+		this.center = 1;
 
 		// Setup
 		this.registerKeyEvents();
@@ -57,24 +59,26 @@
 
 	engine.prototype = {
      	clear: function(){
-			this.ctx.fillStyle = "rgb(0,0,0)";
-			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
      	},
 		collides: function(user){
 			var x = user.x;
 			var y = user.y;
 
-			var ixy = this.orientate(user, 2);
+			// Getting next hypothetical position
+			var ixy = this.orientate(user, 0);
 
+			// Calculating the delta between the current and the new vector to then
+			// determine the next pixel based on the deltas angle.
 			var deltax = ixy[0] - x;
 			var deltay = ixy[1] - y;
 			var angle = Math.atan2(deltay, deltax);
+			var newx = (x + this.radius + 1 * Math.cos(angle));
+			var newy = (y + this.radius + 1 * Math.sin(angle));
 
-			var newx = (x + 3 * Math.cos(angle));
-			var newy = (y + 3 * Math.sin(angle));
 
-			var data = this.ctx.getImageData(newx, newy, 1, 1).data;
-			if (x <= 1 || x >= 499 || y <= 1 || y >= 499 || data[0] != 0 || data[1] != 0 || data[2] != 0){
+			var data = this.ctx.getImageData(newx-this.center, newy-this.center, 1, 1).data;
+			if (x <= 1 || x >= 499 || y <= 1 || y >= 499 || data[3] > 100){
 				return true;
 			}
 			return false;
@@ -91,7 +95,10 @@
 		drawPlayer: function(user){
 			// Draw
 			this.ctx.fillStyle = user.color;
-			this.ctx.fillRect(user.x - 1, user.y - 1, 3, 3);
+			this.ctx.beginPath();
+			this.ctx.arc(user.x - this.center, user.y - this.center, this.radius, 0, Math.PI*2, true);
+			this.ctx.closePath();
+			this.ctx.fill();
 		},
 		gameOver: function(user){
 			alert(user.name + ': you lost!');
@@ -112,8 +119,8 @@
 			this.initPlayer();
 			this.render();
 		},
-		orientate: function(user){
-				var angle = user.angle * (Math.PI / 180);
+		orientate: function(user, angle){
+				var angle = angle * (Math.PI / 270);
 				var speed = 1;
 				var ix = user.ix;
 				var iy = user.iy;
@@ -127,7 +134,7 @@
 				return [x, y, ix, iy];
 		},
 		transform: function(user){
-			var ixy = this.orientate(user, 1);
+			var ixy = this.orientate(user, user.angle);
 
 			user.x = ixy[0];
 			user.y = ixy[1];
@@ -140,12 +147,12 @@
 				p = this.players[player];
 				this.transform(p);
 
+				this.drawPlayer(p);
+
 				// Collision detection
 				if (this.collides(p)){
 					this.gameOver(p);
 				}
-
-				this.drawPlayer(p);
 			}
 			var that = this;
 			webkitRequestAnimationFrame(function(){
