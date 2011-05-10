@@ -1,6 +1,14 @@
 !function(global){
+	var mobile = true;
+
+	var CLICK = mobile ? 'touchstart' : 'click';
+	var KEY_DOWN = mobile ? 'touchstart' : 'keydown';
+	var KEY_UP = mobile ? 'touchend' : 'keyup';
+
 	var engine = global.engine = function(canvas){
 		if (!canvas){ return; }
+
+		mixin(this, delegate());
 
 		this.canvas = canvas;
 		this.ctx = this.canvas.getContext('2d');
@@ -109,13 +117,11 @@
 		},
 		handleEvent: function(e){
 			e.preventDefault();
-//			var charCode = e.keyCode;
-			var charCode = e.target.id;
+			var charCode = e.target.id || e.keyCode;
 			var user, km;
 			(km = this.keyMap[charCode]) && (user = this.keyMap[charCode].id);
 			if (user) {
-//				this.players[user].angle = km.angle - (e.type === 'keyup' ? km.angle : 0);
-				this.players[user].angle = km.angle - (e.type === 'touchend' ? km.angle : 0);
+				this.players[user].angle = km.angle - (e.type === KEY_UP ? km.angle : 0);
 			}
 		},
 		drawPlayer: function(user){
@@ -132,17 +138,12 @@
 			this.clear();
 
 			this.running = false;
+			this.emit('over');
 		},
 		initPlayer: function(){
 			for (var player in this.players){
 				this.drawPlayer(this.players[player]);
 			}
-		},
-		launch: function(){
-			if (!this.init){ return; };
-			this.running = true;
-			this.initPlayer();
-			this.render();
 		},
 		orientate: function(user, angle){
 				var angle = angle * (Math.PI / 120);
@@ -156,6 +157,16 @@
 				var y = user.y + iy;
 
 				return [x, y, ix, iy];
+		},
+		start: function(){
+			if (!this.init){ return; };
+			this.running = true;
+			this.initPlayer();
+			this.render();
+		},
+		stop: function(){
+			this.clear();
+			this.running = false;
 		},
 		transform: function(user){
 			var ixy = this.orientate(user, user.angle);
@@ -186,13 +197,48 @@
 			}, 1000 / 40);
 		},
 		registerKeyEvents: function(){
+			document.body.addEventListener(KEY_DOWN, this);
+			document.body.addEventListener(KEY_UP, this);
+		}
+	};
+
+	var controls = global.controls = function(domNode){
+		this.domNode = domNode;
+
+		mixin(this, delegate());
+
+		this.init();
+	};
+
+	controls.prototype = {
+		createButton: function(name, label, callb){
+			var button = this[name] = document.createElement('button');
+			button.id = name;
+			button.innerHTML = label;
+			button.addEventListener(CLICK, function(){
+				callb();
+			});
+			this.domNode.appendChild(button);
+		},
+		init: function(){
 			var that = this;
+			this.createButton('startButton', 'Start', function(){
+				that.start();
+			});
 
-			document.body.addEventListener('touchstart', this);
-			document.body.addEventListener('touchend', this);
-
-//			document.body.addEventListener('keydown', this);
-//			document.body.addEventListener('keyup', this);
+			this.createButton('stopButton', 'Stop', function(){
+				that.stop();
+			});
+		},
+		start: function(){
+			this.stopButton.style.display = '';
+			this.startButton.style.display = 'none';
+			this.emit('start');
+		},
+		stop: function(){
+			this.stopButton.style.display = 'none';
+			this.startButton.style.display = '';
+			this.emit('stop');
 		}
 	};
 }(this);
