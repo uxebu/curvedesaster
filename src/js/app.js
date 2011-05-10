@@ -9,8 +9,8 @@
 				x: 200,
 				y: 200,
 				color: 'rgb(123,240,543)',
-				ix: -1,
-				iy: 0,
+				ix: 0,
+				iy: 1,
 				angle: 0,
 				name: 'Dude'
 			},
@@ -63,10 +63,17 @@
 		collides: function(user){
 			var x = user.x;
 			var y = user.y;
-			
+
 			var ixy = this.orientate(user, 2);
-			
-			var data = this.ctx.getImageData(ixy[0], ixy[1], 1, 1).data;
+
+			var deltax = ixy[0] - x;
+			var deltay = ixy[1] - y;
+			var angle = Math.atan2(deltay, deltax);
+
+			var newx = (x + 3 * Math.cos(angle));
+			var newy = (y + 3 * Math.sin(angle));
+
+			var data = this.ctx.getImageData(newx, newy, 1, 1).data;
 			if (x <= 1 || x >= 499 || y <= 1 || y >= 499 || data[0] != 0 || data[1] != 0 || data[2] != 0){
 				return true;
 			}
@@ -105,25 +112,23 @@
 			this.initPlayer();
 			this.render();
 		},
-		orientate: function(user, numSteps){
+		orientate: function(user){
 				var angle = user.angle * (Math.PI / 180);
 				var speed = 1;
 				var ix = user.ix;
 				var iy = user.iy;
-				console.log(angle);
-				while (numSteps--){
-					ix = ix * Math.cos(angle) - iy * Math.sin(angle);
-					iy = ix * Math.sin(angle) + iy * Math.cos(angle);
-				}
-				
+
+				ix = ix * Math.cos(angle) - iy * Math.sin(angle);
+				iy = ix * Math.sin(angle) + iy * Math.cos(angle);
+
 				var x = user.x + speed * ix;
 				var y = user.y + speed * iy;
-				
+
 				return [x, y, ix, iy];
 		},
 		transform: function(user){
 			var ixy = this.orientate(user, 1);
-			
+
 			user.x = ixy[0];
 			user.y = ixy[1];
 			user.ix = ixy[2];
