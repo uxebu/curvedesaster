@@ -1,0 +1,3 @@
+[submodule "src/js/socket.io"]
+	path = src/js/socket.io
+	url = https://github.com/LearnBoost/Socket.IO.git
