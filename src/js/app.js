@@ -61,6 +61,10 @@
      	clear: function(){
 			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
      	},
+		isCollidingPixelValue: function(vector){
+			var data = this.ctx.getImageData(vector[0]-this.center, vector[1]-this.center, 1, 1).data;
+			return data[3] > 100;
+		},
 		collides: function(user){
 			var x = user.x;
 			var y = user.y;
@@ -73,15 +77,25 @@
 			var deltax = ixy[0] - x;
 			var deltay = ixy[1] - y;
 			var angle = Math.atan2(deltay, deltax);
-			var newx = (x + this.radius + 1 * Math.cos(angle));
-			var newy = (y + this.radius + 1 * Math.sin(angle));
 
+			// Checking collision at three spots around the tip of the line:
+			// front, left and right
+			var nxyf = this.getVector(user, angle)
+			var nxyr = this.getVector(user, angle + Math.PI/180*90);
+			var nxyl = this.getVector(user, angle + Math.PI/180*-90);
 
-			var data = this.ctx.getImageData(newx-this.center, newy-this.center, 1, 1).data;
-			if (x <= 1 || x >= 499 || y <= 1 || y >= 499 || data[3] > 100){
+			if (x <= 1 || x >= 499 || y <= 1 || y >= 499 ||
+					this.isCollidingPixelValue(nxyf) ||
+					this.isCollidingPixelValue(nxyl) ||
+					this.isCollidingPixelValue(nxyr)){
 				return true;
 			}
 			return false;
+		},
+		getVector: function(user, angle){
+			var x = (user.x + (this.radius + 1) * Math.cos(angle));
+			var y = (user.y + (this.radius + 1) * Math.sin(angle));
+			return [x, y];
 		},
 		handleEvent: function(e){
 			e.preventDefault();
