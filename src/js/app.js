@@ -13,33 +13,41 @@
 				iy: 1,
 				angle: 0,
 				name: 'Dude'
-			},
+			}/*,
 			'fritz': {
-				x: 350,
-				y: 350,
+				x: 250,
+				y: 250,
 				color: 'rgb(100,200,300)',
 				ix: 1,
 				iy: 0,
 				angle: 0,
 				name: 'Fritz'
-			}
+			}*/
 		};
 		this.keyMap = {
 			65: {
 				id: 'fritz',
-				angle: -4
+				angle: -3
 			},
 			68: {
 				id: 'fritz',
-				angle: 4
+				angle: 3
 			},
 			37: {
 				id: 'dude',
-				angle: -4
+				angle: -3
 			},
 			39: {
 				id: 'dude',
-				angle: 4
+				angle: 3
+			},
+			left: {
+			  	id: 'dude',
+			  	angle: -3
+			},
+			right: {
+			   	id: 'dude',
+			   	angle: 3
 			}
 		};
 
@@ -47,11 +55,13 @@
 		this.framerate = 60;
 		this.radius = 1.5;
 		this.center = 1;
+		this.width = this.canvas.width;
+		this.height = this.canvas.height;
 
 		// Setup
 		this.registerKeyEvents();
 
-		// Paint canvas black
+		// Paint clear canvas
 		this.clear();
 
 		this.init = true;
@@ -84,7 +94,7 @@
 			var nxyr = this.getVector(user, angle + Math.PI/180*90);
 			var nxyl = this.getVector(user, angle + Math.PI/180*-90);
 
-			if (x <= 1 || x >= 499 || y <= 1 || y >= 499 ||
+			if (x <= 1 || x >= this.width - 1 || y <= 1 || y >= this.height - 1 ||
 					this.isCollidingPixelValue(nxyf) ||
 					this.isCollidingPixelValue(nxyl) ||
 					this.isCollidingPixelValue(nxyr)){
@@ -99,20 +109,21 @@
 		},
 		handleEvent: function(e){
 			e.preventDefault();
-			var charCode = e.keyCode;
+//			var charCode = e.keyCode;
+			var charCode = e.target.id;
 			var user, km;
 			(km = this.keyMap[charCode]) && (user = this.keyMap[charCode].id);
 			if (user) {
-				this.players[user].angle = km.angle - (e.type === 'keyup' ? km.angle : 0);
+				this.players[user].angle = km.angle - (e.type === 'touchend' ? km.angle : 0);
 			}
 		},
 		drawPlayer: function(user){
 			// Draw
 			this.ctx.fillStyle = user.color;
 			this.ctx.beginPath();
-			this.ctx.arc(user.x - this.center, user.y - this.center, this.radius, 0, Math.PI*2, true);
-			this.ctx.closePath();
+			this.ctx.arc(user.x - this.center, user.y - this.center, this.radius, 0, Math.PI*2);
 			this.ctx.fill();
+		//	this.ctx.closePath();
 		},
 		gameOver: function(user){
 			alert(user.name + ': you lost!');
@@ -134,8 +145,8 @@
 			this.render();
 		},
 		orientate: function(user, angle){
-				var angle = angle * (Math.PI / 270);
-				var speed = 1;
+				var angle = angle * (Math.PI / 120);
+				var speed = 1.1;
 				var ix = user.ix;
 				var iy = user.iy;
 
@@ -169,12 +180,19 @@
 				}
 			}
 			var that = this;
-			webkitRequestAnimationFrame(function(){
+			//webkitRequestAnimationFrame(function(){
+			var t = setTimeout(function(){
+				clearTimeout(t);
 				that.running && that.render();
-			});
+			}, 1000 / 80);
+			//});
 		},
 		registerKeyEvents: function(){
 			var that = this;
+
+			document.body.addEventListener('touchstart', this);
+			document.body.addEventListener('touchend', this);
+
 			document.body.addEventListener('keydown', this);
 			document.body.addEventListener('keyup', this);
 		}
