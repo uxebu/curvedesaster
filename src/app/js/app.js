@@ -1,5 +1,5 @@
 !function(global){
-	var mobile = false;
+	var mobile = true;
 
 	var CLICK = mobile ? 'touchstart' : 'click';
 	var KEY_DOWN = mobile ? 'touchstart' : 'keydown';

@@ -119,8 +119,8 @@ app.get('/:hash', function(req, res){
 	res.render('game.html', { locals: {
 		hash: hash,
 		color: '#' + ((Math.random() * 0x999999 << 0) + 0x666666).toString(16),
-		x: Math.floor(Math.random()*250),
-		y: Math.floor(Math.random()*250)
+		x: Math.floor(Math.random() * (255 - 10 + 1) + 10),
+		y: Math.floor(Math.random() * (255 - 10 + 1) + 10)
 	}});
 });
 
