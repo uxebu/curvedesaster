@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+		<meta name="apple-mobile-web-app-capable" content="yes">
+
+		<link rel="apple-touch-icon" href="icon.png">
+		<link rel="apple-touch-startup-image" href="startup.png">
+
+		<title>Curve Desaster</title>
+		<link rel="stylesheet" type="text/css" href="layout.css">
+	</head>
+	<body>
+		<div class="container">
+		<h1 class="align-center">
+			<img src="logo.png" />
+		</h1>
+		<div class="align-center">
+			<button id="new">Create New Game</button>
+		</div>
+	</div>
+	</body>
+	<script>
+		var buttonNew = document.getElementById('new');
+
+		buttonNew.addEventListener('click', function(){
+			location.href = '/new';
+		});
+	</script>
+</html>

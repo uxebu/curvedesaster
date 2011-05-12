@@ -1,63 +1,22 @@
 !function(global){
-	var mobile = true;
+	var mobile = false;
 
 	var CLICK = mobile ? 'touchstart' : 'click';
 	var KEY_DOWN = mobile ? 'touchstart' : 'keydown';
 	var KEY_UP = mobile ? 'touchend' : 'keyup';
 
-	var engine = global.engine = function(canvas){
+	var engine = global.engine = function(canvas, hash, obj){
 		if (!canvas){ return; }
 
 		mixin(this, delegate());
 
 		this.canvas = canvas;
+		this.canvas.style.borderColor = obj.color;
+		this.hash = hash;
+		this.x = +obj.x; // Cache init values for restart
+		this.y = +obj.y; // Cache init values for restart
+		this.color = obj.color;
 		this.ctx = this.canvas.getContext('2d');
-		this.players = {
-			'dude': {
-				x: 200,
-				y: 200,
-				color: 'rgb(123,240,543)',
-				ix: 0,
-				iy: 1,
-				angle: 0,
-				name: 'Dude'
-			}/*,
-			'fritz': {
-				x: 250,
-				y: 250,
-				color: 'rgb(100,200,300)',
-				ix: 1,
-				iy: 0,
-				angle: 0,
-				name: 'Fritz'
-			}*/
-		};
-		this.keyMap = {
-			65: {
-				id: 'fritz',
-				angle: -3
-			},
-			68: {
-				id: 'fritz',
-				angle: 3
-			},
-			37: {
-				id: 'dude',
-				angle: -3
-			},
-			39: {
-				id: 'dude',
-				angle: 3
-			},
-			left: {
-			  	id: 'dude',
-			  	angle: -3
-			},
-			right: {
-			   	id: 'dude',
-			   	angle: 3
-			}
-		};
 
 		// Config
 		this.framerate = 60;
@@ -72,7 +31,49 @@
 		// Paint clear canvas
 		this.clear();
 
-		this.init = true;
+		var socket = this.socket = new io.Socket();
+		socket.connect();
+
+		var that = this;
+ 		socket.on('message', function(data){
+			switch (data.type){
+				case 'admin':
+					that.admin = true;
+					that.emit('admin');
+					break;
+				case 'joined':
+					console.log('joined', data.users);
+					that.emit('joined', data.users);
+					break;
+				case 'over':
+					that.clear();
+					that.running = false;
+
+					// TODO: We have some code duplication here and in the gameOver method.
+					// factor out.
+					that.emit('over');
+					that.admin && that.emit('admin');
+					alert(data.player.name + ' lost the game hahaha');
+					break;
+				case 'player':
+					console.log('PPlayer');
+					that.emit('player');
+					break;
+				case 'update':
+					that.running && that.drawPlayer({
+						x: data.x,
+						y: data.y,
+						color: data.c
+					});
+					break;
+				case 'start':
+					that.start();
+					that.emit('arm');
+					break;
+			}
+		});
+ 		socket.on('disconnect', function(){ console.log('disconnect'); });
+
 	};
 
 	engine.prototype = {
@@ -116,6 +117,10 @@
 			return [x, y];
 		},
 		handleEvent: function(e){
+			if (!this.init){
+				return;
+			}
+
 			e.preventDefault();
 			var charCode = e.target.id || e.keyCode;
 			var user, km;
@@ -132,18 +137,60 @@
 			this.ctx.fill();
 		},
 		gameOver: function(user){
-			alert(user.name + ': you lost!');
-
 			// Paint canvas black
 			this.clear();
 
+			this.socket.send({
+				type: 'over',
+				player: user
+			});
+
 			this.running = false;
 			this.emit('over');
+			this.admin && this.emit('admin');
+			//this.admin && this.emit('over');
+
+			alert(user.name + ': you lost!');
 		},
 		initPlayer: function(){
 			for (var player in this.players){
 				this.drawPlayer(this.players[player]);
 			}
+		},
+		join: function(name){
+			this.players = {};
+			this.players[name] = {
+					x: +this.x,
+					y: +this.y,
+					color: this.color,
+					ix: 0,
+					iy: 1,
+					angle: 0,
+					name: name
+			};
+
+			this.keyMap = {
+				37: {
+					id: name,
+					angle: -3
+				},
+				39: {
+					id: name,
+					angle: 3
+				},
+				left: {
+					id: name,
+					angle: -3
+				},
+				right: {
+					id: name,
+					angle: 3
+				}
+			};
+
+			this.socket.send({type: 'join', hash: this.hash, username: name});
+
+			this.init = true;
 		},
 		orientate: function(user, angle){
 				var angle = angle * (Math.PI / 120);
@@ -160,6 +207,9 @@
 		},
 		start: function(){
 			if (!this.init){ return; };
+			this.admin && this.socket.send({
+				type: 'start'
+			});
 			this.running = true;
 			this.initPlayer();
 			this.render();
@@ -184,9 +234,20 @@
 
 				this.drawPlayer(p);
 
+				this.socket.send({
+					type: 'update',
+					id: player,
+					x: p.x,
+					y: p.y,
+					c: p.color
+				});
+
 				// Collision detection
 				if (this.collides(p)){
 					this.gameOver(p);
+					p.x = this.x;
+					p.y = this.y;
+
 				}
 			}
 			var that = this;
@@ -207,10 +268,16 @@
 
 		mixin(this, delegate());
 
+		this.validate = /^[a-z0-9]+$/i;
+
 		this.init();
 	};
 
 	controls.prototype = {
+		arm: function(){
+			this.domNode.style.display = 'none';
+			this.startButton.style.display = 'none';
+		},
 		createButton: function(name, label, callb){
 			var button = this[name] = document.createElement('button');
 			button.id = name;
@@ -220,25 +287,67 @@
 			});
 			this.domNode.appendChild(button);
 		},
+		createInput: function(name, type, placeholder){
+			var input = this[name] = document.createElement('input');
+			input.type = type;
+			input.id = name;
+			input.placeholder = placeholder;
+			this.domNode.appendChild(input);
+		},
+		createNode: function(type, name, text){
+			var node = this[name] = document.createElement(type);
+			node.innerText = text;
+			node.id = name;
+			this.domNode.appendChild(node);
+		},
+		enableGame: function(){
+			console.log('Admin again');
+			this.startButton.style.display = 'inline';
+			this.joinButton.style.display = 'none';
+			this.waiting.style.display = 'none';
+			this.username.style.display = 'none';
+		},
 		init: function(){
 			var that = this;
+			this.createInput('username', 'text', 'Enter username');
+
+			this.createButton('joinButton', 'Join', function(){
+				that.join();
+			});
+
 			this.createButton('startButton', 'Start', function(){
 				that.start();
 			});
 
-			this.createButton('stopButton', 'Stop', function(){
-				that.stop();
-			});
+			this.createNode('div', 'waiting', 'Please wait until admin launches the game.');
+			this.createNode('ul', 'members', 'Welcome to curve desaster');
+		},
+		join: function(){
+			var username = this.username.value;
+			if (this.validate.test(username)){
+				this.emit('join', username);
+			}else{
+				alert('You can only use characters');
+			}
+		},
+		joined: function(users){
+					console.log(users.split(','));
+			this.members.innerHTML = users.split(',').map(function(user){
+				return '<li>' + user + '</li>';
+			}).join('');
 		},
 		start: function(){
-			this.stopButton.style.display = '';
-			this.startButton.style.display = 'none';
+		   	this.arm();
 			this.emit('start');
 		},
 		stop: function(){
-			this.stopButton.style.display = 'none';
-			this.startButton.style.display = '';
-			this.emit('stop');
+			this.domNode.style.display = '-webkit-box';
+		},
+		waitGame: function(){
+			console.log('waiting');
+			this.joinButton.style.display = 'none';
+			this.username.style.display = 'none';
+			this.waiting.style.display = 'block';
 		}
 	};
 }(this);

@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+		<title>Curve Desaster</title>
+		<link rel="stylesheet" type="text/css" href="layout.css">
+	</head>
+	<body>
+		<div class="container">
+			<canvas id="canvas" width="292" height="292"></canvas>
+			<button id="left"></button>
+			<button id="right"></button>
+			<div id="controls"></div>
+		</div>
+	</body>
+	<script src="socket.io.js"></script>
+	<script src="lib.js"></script>
+	<script src="delegate.js"></script>
+	<script src="app.js"></script>
+	<script>
+		var ngn = new engine(document.getElementById('canvas'), '{{hash}}', {
+			user: '{{user}}',
+			color: '{{color}}',
+			x: '{{x}}',
+			y: '{{y}}'
+		});
+		var controls = new controls(document.getElementById('controls'));
+
+		// Wiring
+		controls.delegate(ngn, {
+			'start': 'start',
+			'stop': 'stop',
+			'join': 'join'
+		});
+
+		ngn.delegate(controls, {
+			'over': 'stop',
+			'admin': 'enableGame',
+			'player': 'waitGame',
+			'arm': 'arm',
+			'joined': 'joined'
+		});
+	</script>
+</html>
